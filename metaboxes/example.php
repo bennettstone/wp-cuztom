@@ -6,7 +6,7 @@
  * include( TEMPLATEPATH . '/includes/cuztom/cuztom.php' );
  *
  * //Add edition specific metaboxes
- * require_once( TEMPLATEPATH . '/includes/metaboxes/edition-metaboxes-2.php' );
+ * require_once( TEMPLATEPATH . '/includes/metaboxes/example.php' );
  *
  *
  * metaboxes-example.php
@@ -17,9 +17,15 @@
 
 $heading = 'Example metaboxes';
 $this_id = 'page_data';
-$required_templates = array(
-    'custom-post-template.php', 
-    'another-custom-post-template.php'
+$metabox_required_templates = array(
+    'custom-post-template.php' => array(
+        'page_data', 
+        'another_block_id'
+    ), 
+    'another-custom-post-template.php' => array(
+        'page_data_2', 
+        'a_second_block_id'
+    )
 );
 
 $custom_metaboxes = new Cuztom_Post_Type( 'page' );
@@ -44,31 +50,49 @@ $custom_metaboxes->add_meta_box(
 );
 
 /*
- * Hide / show the Price table metabox when needed
+ * Hide / show the metabox when needed
  */
 function check_admin_metabox_display()
 {
-    global $post, $required_templates, $this_id;
+    global $post, $metabox_required_templates;
 
-    if( $post && !empty( $required_templates ) )
+    if( $post && !empty( $metabox_required_templates ) )
     {
-        echo '<script>
-        (function( $ ) {
-        "use strict";
-
-        $(function() {
-            var metabox_templates = ["'.implode( '", "', $required_templates ).'"];
-            $(\'#page_template\').change(function() {
-                $(\'#'.$this_id.'\' ).toggle((metabox_templates.indexOf($(this).val()) > -1));
-            }).change();
-        });
-
-        }(jQuery));</script>';
-        
-        if( !in_array( get_post_meta( $post->ID, '_wp_page_template', true ), $required_templates ) )
+        foreach( $metabox_required_templates as $template => $template_ids )
         {
-            echo '<style>#'.$this_id.'{ display:none; }</style>';
-        }
-    }
+            if( is_array( $template_ids ) )
+            {
+                $ids = array();
+                foreach( $template_ids as $i )
+                {
+                    $ids[] = '#'. $i;
+                }
+                $this_id = implode( ', ', $ids );
+            }
+            else
+            {
+                $this_id = '#'. $template_ids;
+            }
+            echo '<script>
+            (function( $ ) {
+            "use strict";
+
+            $(function() {
+                var metabox_templates = ["'.$template.'"];
+                $(\'#page_template\').change(function() {
+                    $(\''.$this_id.'\' ).toggle((metabox_templates.indexOf($(this).val()) > -1));
+                }).change();
+            });
+
+            }(jQuery));</script>';
+
+            if( get_post_meta( $post->ID, '_wp_page_template', true ) != $template )
+            {
+                echo '<style>'.$this_id.'{ display:none; }</style>';
+            }
+            
+        } //end foreach
+        
+    } //end if $post and $metabox_required_templates
 }
 add_action( 'admin_notices', 'check_admin_metabox_display' );
